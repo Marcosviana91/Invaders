@@ -24,7 +24,7 @@ class Nave(Rect):
 		return Projétil(self.midtop[0], self.midtop[1],self._enemy) if not self._enemy else Projétil(self.midbottom[0], self.midbottom[1],self._enemy)
 
 	
-	def vida(self, dano):
+	def vida(self, dano=0):
 		if dano > 0:
 			snd_hit.play()
 		elif dano < 0:
@@ -63,16 +63,58 @@ class Projétil(Rect):
 		self.mover()
 
 
-def coracao(top=0, left=0, tam=100):
-	return pygame.draw.polygon(tela,ROSA_CHOQUE,((top+0,left+tam*0.25),(top+0,left+tam*0.5),(top+tam*0.5,left+tam),(top+tam,left+tam*0.5),(top+tam,left+tam*0.25),(top+tam*0.75,left),(top+tam*0.6,left),(top+tam*0.5,left+tam*0.25),(top+tam*0.4,left),(top+tam*0.25,left)))
+class Coracao(Rect):
+	def __init__(self, left, top, tam):
+		self.left = left
+		self.top = top
+		self.width = self.height = self.tam = tam
+
+
+	def mover(self):
+		self.top += 5
+		
+
+	def desenhar(self):
+		pygame.draw.polygon(tela,ROSA_CHOQUE,((self.left+0,self.top+self.tam*0.25),(self.left+0,self.top+self.tam*0.5),(self.left+self.tam*0.5,self.top+self.tam),(self.left+self.tam,self.top+self.tam*0.5),(self.left+self.tam,self.top+self.tam*0.25),(self.left+self.tam*0.75,self.top),(self.left+self.tam*0.6,self.top),(self.left+self.tam*0.5,self.top+self.tam*0.25),(self.left+self.tam*0.4,self.top),(self.left+self.tam*0.25,self.top)))
+		self.mover()
 
 
 def controle():
 	return pygame.draw.polygon(tela,BRANCO, ((largura_tela//10*2, altura_tela//20*15), (largura_tela//10*8, altura_tela//20*15),(largura_tela//10*9, altura_tela//20*16),(largura_tela//10*8, altura_tela//20*17),(largura_tela//10*2, altura_tela//20*17),(largura_tela//10, altura_tela//20*16)))
 
 
+def fim_de_jogo():
+	global pontuação
+	global ni
+	global nj
+	global msg_ponto
+	
+	tela.fill(PRETO)
+	fim = True
+	msg_fim = FONTE.render('FIM DE JOGO', True, VERMELHO)
+	msg_fim_rect = tela.blit(msg_fim,((largura_tela//2)-(msg_fim.get_width()//2), altura_tela//2))
+	tela.blit(msg_ponto, ((largura_tela//2)-(msg_ponto.get_width()//2), (altura_tela//2) + msg_fim.get_height()))
+	pygame.display.flip()
+	while fim:
+		for event in pygame.event.get():
+			if event.type == QUIT:
+				pygame.quit()
+				exit()
+			if event.type == KEYDOWN:
+				if event.key == K_r:
+					fim = False
+			if event.type == MOUSEBUTTONDOWN:
+				if msg_fim_rect.collidepoint(event.pos):
+					fim = False
+		todos_projetil.clear()
+		pontuação = 0
+		ni = Nave((largura_tela//2),(altura_tela//20), enemy=True)
+		nj = Nave((largura_tela//2),(altura_tela//20*14))
+
+
 todos_projetil = []
 todos_inimigo = []
+novo_coracao = None
 
 fps = 60
 contador = 0
@@ -101,27 +143,28 @@ snd_shoot = pygame.mixer.Sound('sounds/shoot.wav') #smw_lava_bubble.wav
 snd_hit = pygame.mixer.Sound('sounds/hit.wav') #smw_shell_ricochet.wav
 snd_dies = pygame.mixer.Sound('sounds/nave_dies.wav') #smw_swooper_no_echo.wav
 
-
 nj = Nave((largura_tela//2),(altura_tela//20*14))
 ni = Nave((largura_tela//2),(altura_tela//20), enemy=True)
 
 while True:
-	
-	msg_ponto = FONTE.render(f'Pontuação: {pontuação}', True, AZUL)
-	msg_vida_jogador = FONTE.render(f'Vida da Nave do jogador: {nj.vida(0)}', True,VERDE)
-	msg_vida_inimigo = FONTE.render(f'Vida da Nave do inimigo: {ni.vida(0)}', True, OURO)
+	msg_ponto = FONTEp.render(f'Score: {pontuação}', True, AZUL)
+	msg_vida_jogador = FONTEp.render(f'Player Life: {nj.vida()}', True,VERDE)
+	msg_vida_inimigo = FONTEp.render(f'Enemy Life: {ni.vida()}', True, OURO)
+	msg_vida_em_inimigo = FONTEp.render(str(ni.vida()),True,VERMELHO)
 
 	
 	relogio.tick(fps)
 	tela.fill(PRETO)
-	tela.blit(msg_ponto,(0, 0))
-	tela.blit(msg_vida_inimigo,(0, 80))
-	tela.blit(msg_vida_jogador,(0, 160))
+	l1 = tela.blit(msg_ponto,(0, 0))
+	l2 = tela.blit(msg_vida_inimigo,(0, l1.bottom))
+	tela.blit(msg_vida_jogador,(0, l2.bottom))
 	controle()
 	nj.desenhar()
 	ni.desenhar()
+	tela.blit(msg_vida_em_inimigo,(largura_tela//2, ni.top-FONTEp.get_height()))
 	nj.mover(vel)
 	ni.mover(vel_i)
+
 	
 	if nj.right == largura_tela:
 		vel = -vel
@@ -160,8 +203,8 @@ while True:
 				vel = -vel
 				todos_projetil.append(nj.atirar())
 	
-	for projetil in todos_projetil:
-		if len(todos_projetil) > 0:
+	if len(todos_projetil) > 0:
+		for projetil in todos_projetil:
 			projetil.desenhar()
 			if projetil.colliderect(ni.Rect()):
 				todos_projetil.remove(projetil)
@@ -173,12 +216,20 @@ while True:
 			elif projetil.colliderect(nj.Rect()):
 				todos_projetil.remove(projetil)
 				if nj.vida(projetil.dano) <= 0:
-					pygame.time.wait(2000)
+					fim_de_jogo()
 			elif projetil.top < 0 or projetil.bottom > altura_tela:
 				todos_projetil.remove(projetil)
-	if pontuação > 0 and pontuação%4 == 0:
-		print('desce coracao') #coracao((altura_tela/40)/fps))
-	
+				
+	if pontuação > 0 and pontuação%3 == 0 and novo_coracao is None:
+		novo_coracao = Coracao(largura_tela//2,0,25)
+	if novo_coracao is not None:
+		novo_coracao.desenhar()
+		if novo_coracao.colliderect(nj.Rect()):
+			nj.vida(-novo_coracao.tam)
+			novo_coracao = None
+		elif novo_coracao.bottom > altura_tela:
+			novo_coracao = None
+		
 	
 	ni.top += ((altura_tela/20)/fps)
 	contador += 1
@@ -186,6 +237,6 @@ while True:
 		contador = 0
 		todos_projetil.append(ni.atirar())
 	if ni.bottom > nj.top:
-		break
+		fim_de_jogo()
 	
 	pygame.display.flip()
