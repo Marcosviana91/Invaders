@@ -88,7 +88,13 @@ def fim_de_jogo():
 	global ni
 	global nj
 	global msg_ponto
-	
+	while True:
+		tela.fill(PRETO)
+		ni.top += ((altura_tela/10)/fps)
+		ni.desenhar()
+		pygame.display.flip()
+		if ni.top > altura_tela:
+			break
 	tela.fill(PRETO)
 	fim = True
 	msg_fim = FONTE.render('FIM DE JOGO', True, VERMELHO)
